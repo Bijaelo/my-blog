@@ -1,2 +1,8 @@
 '' 
 .Rproj.user
+blogdown
+public
+themes/public
+themes/blogdown
+Thumbs.db
+themes/Thumbs.db
