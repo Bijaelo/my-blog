@@ -2,7 +2,7 @@
 title: my first post
 author: Oliver P. Madsen
 date: '2020-11-21'
-slug: my-first-post
+slug: my-first-post-manul
 categories: ["new post"]
 tags: ['tech', 'initial post']
 keywords:
