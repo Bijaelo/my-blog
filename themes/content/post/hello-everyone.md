@@ -3,7 +3,6 @@ categories:
 - my R blog
 - introduction
 date: "2020-11-29"
-showPagination: false
 tags:
 - intro
 thumbnailImage: //d1u9biwaxjngwg.cloudfront.net/cover-image-showcase/city-750.jpg
