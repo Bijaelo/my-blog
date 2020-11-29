@@ -12,7 +12,7 @@ title: My first post!
 slug: 'introductions-R-blog'
 ---
 # Welcome to my R blog!
-<!-- more -->
+<!--more-->
 Hello and welcome to my R blog. 
 
 I'm an R enthusiast with over 6 years of R experience. Starting out at University I was taught by Peter Dalgaard (R core) in statistics and R's role as a statistics software. Since then I've used my knowledge to program Data Science solutions including Credit Risk Models, solutions to Linear and Non-linear programming problems, R packages for data manipulation and database integrations and general machine learning. 
