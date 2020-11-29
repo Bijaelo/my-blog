@@ -41,9 +41,9 @@ Here I'm embedding an image using standard markdown syntax. It works as expected
 
 Here I'm embedding an image using figure. It seems to work.
 
-```markdown
+````markdown
 {{<figure src="index_files/figure-html/test-1.png" width="672" >}}
-```
+````
 
 {{<figure src="index_files/figure-html/test-1.png" width="672" >}}
 

@@ -6,3 +6,5 @@ themes/public
 themes/blogdown
 Thumbs.db
 themes/Thumbs.db
+.Rhistory
+.Rprofile

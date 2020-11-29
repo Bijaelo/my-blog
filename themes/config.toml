@@ -12,10 +12,10 @@
 # For developpers, if you modify this theme, put your images in `source/images` folder and
 # use grunt task `build` to synchronize assets
 
-baseURL = "https://reverent-bardeen-943ae9.netlify.app/"
+baseURL = "https://my-r-adventure.netlify.app/"
 languageCode = "en-us"
 defaultContentLanguage = "en-us"
-title = "My very interesting blog name"
+title = "My R adventure"
 theme = "hugo-tranquilpeak-theme"
 disqusShortname = "hugo-tranquilpeak-theme"
 # googleAnalytics = "UA-123-45"
@@ -76,7 +76,7 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_cache$", "\\.knit\\.md$", "\\.utf8\
   identifier = "about"
   name = "About"
   pre = "<i class=\"sidebar-button-icon fa fa-lg fa-question\"></i>"
-  url = "/#about"
+  url = "/#about"  
 
 [[menu.links]]
   weight = 1
@@ -102,6 +102,11 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_cache$", "\\.knit\\.md$", "\\.utf8\
   name = 'Docker'
   pre = '<i class=\"sidebar-button-icon fa fa-lg fa-docker\"></i>' # I dont know how to use the docker icon..
   url = 'https://hub.docker.com/u/bijaelo'
+[[menu.links]]
+  weight = 5
+  identifier = 'My French Adventure'
+  name = 'My French Adventure'
+  url = 'https://my-french-adventure.netlify.app'
 
 [[menu.misc]]
   weight = 1
@@ -146,7 +151,7 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_cache$", "\\.knit\\.md$", "\\.utf8\
   #    large sidebar is swiped on all lower screens
   # 5: Display header bar on all screens and large sidebar is swiped on large screen
   # 6: Display header bar on all screens and medium sidebar is swiped
-  sidebarBehavior = 1
+  sidebarBehavior = 2
 
   # Your blog cover picture. I STRONGLY recommend you to use a CDN to speed up loading of pages.
   # There is many free CDN like Cloudinary or you can also use indirectly
