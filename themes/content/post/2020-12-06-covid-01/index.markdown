@@ -1,0 +1,301 @@
+---
+title: The christmas covid situation in Denmark
+author: Oliver P. Madsen
+date: '2020-12-06'
+slug: covid-2020-12-06-v2
+categories: [covid, EDA, forecasting]
+tags: ["covid", "EDA", "forecasting", "time series", "Denmark"]
+keywords:
+  - covid
+  - tech
+  - EDA
+  - Data Science
+---
+# Covid christmas 2020
+Recently the Danish president urged the Danish population to be more careful
+and declared that they should expect further restrictions during the Christmas period. Why?
+<!--more-->
+
+# Covid and background
+As all living human beings over the age of 6 in 2020 should be aware of, the global covid pandemic has been scourging the planet. Every country has made some kind of restriction in order to reduce either economic cost or number of deaths. As a Danish citizen citizen I am of course engaged in the situation from the perspective of my own country, and have long been a large proponent against the complete rule of the Danish government since March 2020.
+
+My main frustrations has consistently been:
+
+1. Information is only announced in absolute count and incidence of our chain of infection.
+1. Before October there was no clear statement on which actions would be taken and when, and although some was given in October, it is not in absolute terms and the measure used to evaluate the different levels of restrictions is only vaguely defined, this
+    * leads to uncertainty about the future for the Danish population and companies
+    * reduces the sense of individual control.  
+1. Currently the government has mandate giving them complete control, which changes the structure from a standard democracy to a similar structure as the structure in China
+
+As my frustration about the first argument has been peaking, and since aggregate data is made freely available [online](https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata) I've made up my mind to make a blog post to analyze the data and make up my mind on whether I believe further restrictions are in order during the Christmas holiday. 
+
+**Disclaimer:** I am by no means an epidemiologist, but rather an Financial Economist with a strong background in Statistical modeling. Please take my opinions with a grain of salt. They are likely to be highly subjective by consequence of my own political views. 
+
+# More about the available data.
+
+Since the 6'th of May data has been freely available in aggregate form [online](https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata) as zipped csv files. Prior to this date it was available but only in PDF format. 
+
+The detail available has gotten better over time. Initially only 6 different aggregates were made available, including data about Case by age and sex, Deaths time series, total Municipality positive tests, newly admitted count time series and positive test time series. At some point later the time series for each municipality was made public as well as a measure for the chain of infection called "Incidence". 
+
+The data is publicized on a daily basis, and one should note that data is only included once Statens Serum Institute (SSI) has gotten access to the data itself. As such the time series data will be continuously updated as new data is obtained and we should not trust very recent data within each file. 
+
+For reproducibility I'll only be using data from before `2020-12-06`, not including, but the code contained can be used for data publicized later by changing the variable `last_date`.
+<details><summary>Code chunk</summary>
+<!-- reference
+https://stackoverflow.com/questions/37755037/how-to-add-code-folding-to-output-chunks-in-rmarkdown-html-documents
+-->
+
+```r
+last_date <- '2020-12-05'
+```
+</details>
+
+# Questions I want to answer about the Danish Covid pandemic
+
+To make this post more concrete, I have a four questions I'd like to answer. 
+
+1. How old is the information that is used to make political decisions at best?
+1. Has the development of Covid worsened in the recent period?
+1. Is absolute positive test count a valid indicator for future infection and death rate (eg. is using absolute count a valid measure to proclaim)? 
+1. Is there a significant threat to the health of the Danish population if no further restrictions were put in place?
+
+Answering these questions is going to be tricky, and I am not going to be able to cover all the nuances within them. To answer them I will be using various visualizations, tests and regression methods and will do my best to avoid basing my interpretations and conclusions on my own political views.
+
+## How old is the information that is used to make poltiical decisions at best?
+This question is interesting, because the data that is proclaimed is often said to be "yesterdays" data. But clearly most data is not made available by this point. So while it is not unlikely that our data is slightly delayed, it seems safe to assume that our data is not delayed significantly compared to the data provided to the politicians.
+
+To analyze this question I will be looking through each file, extract the time series data and convert this into a data stream over the publication date. In this data stream I am then going to calculate the degree of available data for each observation date (not publication date). Looking at averages of the degree of available over a moving time window lets us see 2 things:
+
+1. Has the average time for available data changed over time?
+2. What is the current average time for available data?
+
+It is likely that we will see some noise in the series.
+
+<details><summary>code chunks (import libraries)</summary>
+
+```r
+suppressPackageStartupMessages(library(xml2))
+suppressPackageStartupMessages(library(rvest))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(data.table))
+suppressPackageStartupMessages(library(patchwork))
+```
+</details>
+<details><summary>code chunks (import download files)</summary>
+
+```r
+# Download all files from a given URL based on a search given by file_pattern.
+download_covid_files <- function(last_date, url, file_pattern){
+  # Import the html page
+  pg <- read_html(url)
+  # Find nodes that contain links
+  links <- html_attr(html_nodes(pg, "a"), "href")
+  # Extract relevant links (identified by pattern)
+  data_files <- links[grepl(file_pattern, links)]
+  # Extract date from file name
+  data_files_dates <-
+    as.Date(sapply(strsplit(basename(data_files), '-'), function(x)
+      as.character(as.Date(x[4], format = '%d%m%Y'))))
+  # Download files into ./data_files/*.zip
+  if(!dir.exists('./data_files/'))
+    dir.create('./data_files')
+  data_files <- data_files[data_files_dates < last_date]
+  for(i in data_files)
+    outfile <- file.path('./data_files', 
+                         paste0(basename(i), '.zip'))
+    if(!file.exists(outfile))
+      download.file(i, 
+                    outfile,
+                    method = 'curl', extra = '-L')
+  invisible()
+}
+# Iterate over each downloaded zip file in a directory and unzip them
+unzip_files <- function(dir, .unlink = FALSE){
+  files <- list.files(path = dir, 
+                      pattern = '\\.zip$', 
+                      full.names = TRUE, 
+                      recursive = FALSE)
+  for(i in files){
+    outdir <- gsub('\\.zip', '', i)
+    if(!dir.exists(outdir))
+      unzip(i, exdir = outdir)
+  }
+  if(.unlink)
+    unlink(files, force = TRUE, expand = FALSE)
+  invisible()
+}
+```
+</details>
+<details><summary>code chunks (import convert files)</summary>
+
+```r
+# Convert files given a specific pattern and fixfun out to a specific directory
+convert <- compiler::cmpfun(function(pattern, outdir, fixfun, dec = '.', ...){
+  # find files within data_files given pattern
+  files <- list.files('./data_files', 
+                      pattern = pattern, 
+                      recursive = TRUE, 
+                      full.names = TRUE)
+  if(!dir.exists(outdir))
+    dir.create(outdir, recursive = TRUE)
+  for(i in files){
+    # Extract date from the file name. 
+    dir_date <- as.Date(strsplit(gsub('(.*)?/', '', dirname(i)), '-')[[1]][4], 
+                        format = '%d%m%Y')
+    outfile <- file.path(outdir, paste0(as.character(dir_date), '.csv'))
+    if(file.exists(outfile))
+      next
+    df <- fixfun(fread(i, dec = dec), ...)
+    df %>% 
+      mutate(stream_date = dir_date) %>% 
+      fwrite(outfile)
+  }
+  invisible()
+})
+# Fix number of deaths. Fix date format and add cumulative total
+fix_deaths <- function(deaths, ...){
+  setnames(deaths, names(deaths), c('Dato', 'death_count'))
+  data.table::copy(deaths[-.N, .(Dato = as.IDate(Dato),
+                cumulative_total = cumsum(death_count))])
+}
+# Fix number of cases. Sum across regions and add cumulative total
+fix_cases <- function(cases, ...)
+  cases %>% rowwise() %>%
+    mutate(total = sum(c_across(-date_sample))) %>%
+    select(date_sample, total) %>%
+    ungroup() %>%
+    mutate(cumulative_total = cumsum(total)) %>%
+    data.table::copy()
+# Fix number of admitted patients. Sum across regions and add cumulative total
+fix_admitted <- function(admitted, ...)
+  admitted %>% rowwise() %>%
+    mutate(total = sum(c_across(-Dato))) %>%
+    select(Dato, total) %>%
+    ungroup() %>%
+    mutate(cumulative_total = cumsum(total)) %>%
+    data.table::copy()
+# Fix number of tests. Sum across regions and add cumulative total
+fix_test <- function(test, ...)
+  test %>% rowwise() %>%
+    mutate(total = sum(c_across(-PrDate_adjusted))) %>%
+    select(PrDate_adjusted, total) %>%
+    ungroup() %>%
+    mutate(cumulative_total = cumsum(total)) %>%
+    data.table::copy()
+# Fix test_pos. Change date to proper format, fix numeric columns.
+fix_test_pos <- function(test_pos, ...){
+  if('PosPct' %in% names(test_pos) && !is.numeric(test_pos$PosPct))
+    test_pos[, PosPct := as.numeric(gsub(',', '.', PosPct))]
+  if(!'Date' %in% names(test_pos)){
+    return(fix_test_pos_special(test_pos, ...))
+  }
+  # In case all columns are actually correctly specified as numeric
+  if(sum(sapply(test_pos, is.numeric)) == ncol(test_pos) - 1){
+    test_pos[-((.N - 1):(.N))] %>%
+      mutate(Date = tryCatch(as.IDate(Date), error = function(x)fix_date(Date))) %>%
+      data.table::copy()
+  }else
+    test_pos[-((.N - 1):(.N))] %>%
+      mutate(across(-c(Date, where(is.numeric)), 
+                    function(x)as.numeric(gsub('\\.', '', x))),
+             Date = tryCatch(as.IDate(Date), error = function(x)fix_date(Date))) %>%
+      data.table::copy()
+}
+# Fixing function, after noticing some files are different early in the publication process
+fix_test_pos_special <- function(test_pos, ...){
+  setnames(test_pos, 
+           names(test_pos), 
+           c('Date', 'NewPositive', 'Tested', 'PosPct'))
+  test_pos <- copy(test_pos[-.N])
+  test_pos[, Date := fix_date(Date)]
+  test_pos[, PosPct := as.numeric(gsub('\\*', '', gsub(',', '.', PosPct)))]
+  test_pos[, NewPositive := as.numeric(gsub('\\*', '', gsub('\\.', '', NewPositive)))]
+  test_pos[, Tested := as.numeric(gsub('\\*', '', gsub('\\.', '', Tested)))]
+  test_pos[, Tested_kumulativ := cumsum(Tested)]
+  test_pos
+}
+fix_date <- function(x){
+  dates <- strsplit(trimws(gsub('\\.', '', x)), ' ')
+  as.Date(sapply(dates, function(x){
+    paste0('2020-', 
+           (1:12)[
+             match(tolower(substr(x[2], 1, 3)), 
+                   c('jan', 'feb', 'mar', 'apr', 'maj', 'jun', 
+                     'jul', 'aug', 'sep', 'okt', 'nov', 'dec')
+                   )
+           ], '-',
+           x[1])
+  }))
+}
+download_covid_files(last_date, 
+                     "https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata", 
+                     '(data-epidemiologiske-rapport-[0-9]{4}(2020)-(.*)?)$')
+unzip_files('./data_files')
+#unzip(fp, exdir = gsub('\\.zip', '', fp))
+# Convert deaths
+convert('Deaths_over_time\\.csv$', './data_files/deaths', fix_deaths)
+# Convert test_pos
+convert('Test_pos_over_time\\.csv$', './data_files/test_pos', fix_test_pos, dec = ',')
+# Convert tests
+convert('Municipality_tested_persons_time_series\\.csv$', './data_files/tests', fix_test)
+# Convert admitted
+convert('Newly_admitted_over_time\\.csv$', './data_files/admitted', fix_admitted)
+# Convert cases
+convert('Municipality_cases_time_series\\.csv$', './data_files/cases', fix_cases)
+# Oh my god it freaking worked.
+# Time to find the delay time. 
+```
+</details>
+<details><summary>code chunks (evaluate data delay)</summary>
+
+```r
+# Most of the files have consistent formats. test_pos_over_time did not however. 
+# So I'll handle the files that *did* have consistent formats first and then 
+# I'll take a bit of time to handle the remaining data.
+
+# 1) Import all files
+# 2) bind rows together, matching column names
+# 3) decide which columns to use for "data evaluation" (note not all are available)
+# 4) Calculate the convergence rate given stream_date.
+#    1) Should last stream date be used as reference?
+#    2) Should the last couple rows of the last files be removed just to be sure? 
+#       (stream date - 2 days maybe..)
+# 5) Decide on visualizations for each of the file types. It may be possible to 
+#    combine some plots together in a single pane.
+cases_delay <- function(){
+  files <- list.files('./data_files/cases', pattern = '\\.csv$', full.names = TRUE)
+  comb_df <- rbindlist(lapply(files, function(x)fread(x)))
+  # Calculate plotting data
+  setorder(comb_df, date_sample, stream_date)
+  comb_df[, `:=`(last_val = last(total),
+                 convergence_rate = total/last(total),
+                 delay = stream_date - date_sample),
+          by = .(date_sample)]
+  comb_df
+}
+cases_df <- cases_delay()
+p_cases <- cases_df[abs(convergence_rate - 1) < .Machine$double.eps^(1/2), 
+                    .(min_delay = min(delay)), by = date_sample][min_delay <= 20] %>%  
+  ggplot(aes(x = min_delay)) + 
+    geom_density(kernel = 'epanechnikov', 
+               bw = 'SJ', 
+               fill = '#30907075', 
+               col = '#309070') + 
+  coord_cartesian(xlim = c(0, 20)) +
+  labs(x = 'Data delay (100 % coverage rate)', 
+       title = 'Density over 100 % coverage rate delay') + 
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank(), 
+        axis.ticks.y = element_blank(),
+        axis.title.x = element_text(#color = '#851035', 
+                                    size = 14),
+        axis.text.x = element_text(size = 12),
+                                   #, color = '#751010'),
+        panel.border = element_rect(fill = '#00000020'),
+        #plot.background = element_rect(fill = '#15301000'),
+        #plot.title = element_text(color = '#851035', size = 16)
+        ) 
+```
+</details>
+
+

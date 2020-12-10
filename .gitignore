@@ -8,3 +8,5 @@ Thumbs.db
 themes/Thumbs.db
 .Rhistory
 .Rprofile
+*.csv
+*.zip
