@@ -2,6 +2,7 @@
 title: Simulating mixed models
 author: Oliver P. Madsen
 date: '2020-12-10'
+showPagination: false
 slug: simulating-mixed-models
 categories: ['Hierachical models', 'Mixed model', 'Statistics', 'Stackoverflow question', 'Data Science']
 tags: ['Hierachical models', 'Mixed model', 'Statistics', 'Stackoverflow question', 'Data Science']

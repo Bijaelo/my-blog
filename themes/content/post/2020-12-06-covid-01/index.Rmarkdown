@@ -290,6 +290,21 @@ p_cases <- cases_df[abs(convergence_rate - 1) < .Machine$double.eps^(1/2),
         #plot.background = element_rect(fill = '#15301000'),
         #plot.title = element_text(color = '#851035', size = 16)
         ) 
+p2 <- ggstatsplot::gghistostats(
+  data = cases_df[abs(convergence_rate - 1) < .Machine$double.eps^(1/2), 
+                    .(min_delay = min(delay)), by = date_sample][min_delay <= 20], # dataframe from which variable is to be taken
+  x = min_delay, # numeric variable whose distribution is of interest
+  title = "Distribution of Iris sepal length", # title for the plot
+  caption = substitute(paste(italic("Source:"), "Ronald Fisher's Iris data set")),
+  bar.measure = "both",
+  test.value = 5,
+  test.value.line = TRUE,
+  centrality.parameter = "mean", # which measure of central tendency is to be plotted
+  centrality.line.args = list(color = "darkred"), # aesthetics for central tendency line
+  binwidth = 0.10, # binwidth value (experiment)
+  ggtheme = hrbrthemes::theme_ipsum_tw(), # choosing a different theme
+  ggstatsplot.layer = FALSE # turn off ggstatsplot theme layer
+)
 
 ```
 </details>
