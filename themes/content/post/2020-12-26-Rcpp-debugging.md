@@ -43,9 +43,10 @@ When we are looking for debugging compiled code, we are looking for the same opt
 # available ressources on debugging compiled code
 When it comes to debugging compiled code, all sources reference the [Writing R extensions](https://cran.r-project.org/doc/manuals/r-release/R-exts.pdf) (or reference a source that references [Writing R extensions](https://cran.r-project.org/doc/manuals/r-release/R-exts.pdf)). The main sections about compiled code in the manual is 1.2, 1.5.4, 1.6.4, 3.4, 4.4 and the entire 5'th and 6'th chapter. This is a lot, but the debugging sections are primarily in chapter 4, while the other contain interesting code.
 
-## FIX ME!!! -> This section is very much incomplete
+It has been a day since my brain last had a chance to melt when it comes to this problem. Getting back to it, I have now come a little bit closer. 
 
-Other references:
+Below are the current ressources I have and will be using:
+
 * https://r-pkgs.org/src.html#src-debugging
 * https://github.com/renkun-ken/vscode-rcpp-demo/blob/master/.vscode/c_cpp_properties.json
 * https://gist.github.com/kongdd/28cbc006cba24beb50352d30055e3822
@@ -53,3 +54,42 @@ Other references:
 * https://blog.davisvaughan.com/2019/04/05/debug-r-package-with-cpp/
 * https://github.com/aryoda/R_CppDebugHelper
 * https://www.brodieg.com/2018/04/06/adventures-in-r-and-compiled-code/
+* https://magic-lantern.github.io/2018/10/05/2018-10-05-how-to-profile-your-r-code-that-calls-c-c-plus-plus/
+* http://evolvedmicrobe.com/blogs/?p=359
+
+Really promising references:
+
+* https://code.visualstudio.com/docs/cpp/config-mingw
+* http://www.mingw.org/wiki/sampledll
+
+So my current strategy is to find a way to:
+
+1. Debug the code using and R and C++ plugin to Visual Studio Code,
+1. Try to get gdb working to get debugging working through the command prompt. First I'll do this with some code I've compiled myself, and then I will try to replicate it with the exact same script, but going through the Rcpp magic filter
+1. Then I'll try to see if I can get this working while executing the code from either the R-gui or Rstudio gui. This is what It'd call the "optimal" solution, so we could step through the problem line by line in our most frequently used environemnt
+1. And last I want to simply do this by building our library through a linux docker image (rocker/rstudio or similar) and try again to get it working through the commandline and then the Rstudio gui. This should (in theory) be the simplest of them all, as we'd just be using the builtin -d flag in the R executable. But again I am expecting to have some minor hickups along the way. 
+
+I am documenting the procedure as I'm going on and once I've figured which methods work and which I simply cannot get working I'll make a post with with an organized guide for debugging Rcpp on windows.
+
+## debugging with gdb and R.exe
+This was the first thing I tried, and it looked promising at first, primarily based on a stackoverflow post about debugging, a blog post about profiling and one about debugging. The only catch was they were all talking about it from the perspective of a mac user, but two of them stating that they believe it should work for windows users. 
+
+My methodology:
+1. Install gdb.
+   * Download the newest version of gdb (I used gdb 10.1 as of 2020-12-26)
+       * Either do this on their website, or from the command prompt type  
+       `curl https://ftp.gnu.org/gnu/gdb/gdb-{vers-nr}.tar.gz -o {folder-path}/gdb-{vers-nr}.tar.gz`  
+       while replacing `folder-path` and `vers-nr` with the folder you want to download to and the version to download.
+   * Unzip the folder. This is simplest from the command prompt by typing `tar -xzvf {folder-path}/gdb-{vers-nr}.tar.gz`. Here `-x` is for extract, `-z` is to indicate it is a zip file, `-v` is for verbose and `-f` is for filename (and can be left out). See `tar --help` for more info
+1. If you want to perform this multiple times, I suggest adding `R.home("bin")` and the `{folder-path}/gdb-{vers-nr}/gdb` to your [system environment path variable](https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/). You are likely going to debug multiple times, and this lets you easily execute the things you need. Maybe you should add folder to Rgui.exe and Rstudio.exe as well, in case I get debugging from either working.
+1. Create a script **with-a-bug** (example below this list).
+1. (maybe set debug flag in Makevars/makeconf/Makevars.win? It didnt seem to have an effect, but I might have to set it in the dll flags. Still testing, will extend if I figure this out.)
+1. From the commandline execute 
+   1. `gdb R.exe`. This starts up the gdb environment and lets it know that it needs to lookout for errors while running R.exe.
+   1. `breakpoint {name of function with known error} -y`. This sets a flag that if an error occurs in the function, the debugger should activate (in the gdb window, not Rgui or R-console!)
+   1. `run`, which will start up the R from console (if we had run `gdb Rgui.exe` it would start the Rgui.)
+   1. Execute the bugged script. 
+   1. Now here we should either be able to debug the code from R itself or maybe using `ctrl+D` to exit to gdb and debug from here. But up till now I haven't been able to replicate the debugger activating.
+
+That should be the process. One we are at the debugger we should be able to use our standard commands and do our thing, but right now it is not working.
+
