@@ -93,3 +93,9 @@ My methodology:
 
 That should be the process. One we are at the debugger we should be able to use our standard commands and do our thing, but right now it is not working.
 
+
+## Debugging with Visual Studio Code and Mingw
+This is still early in the process. And my C++ experience is till 6 years old (with a break that is of equal length), so I am a bit out of my depths still. 
+
+For this I'll start by creating a commandline script (that is independent of R and Rcpp). Afterwards I'll find the specific flags used by R and try to manually generate a script (old-style) without using R CMD shlib (R CMD shared-library). This **is** possible, and once I've figured it out I will try to access the function from R. This is basically what I expect to be the "old-fashioned" way of generating compiled libraries for R. I might have to rewrite the script slightly here, to accomodate the R `SEXP` class and use **Rcpp.h** for inputs. But I'll figure this out as I go. Last, once I've figured the flags, been able to connect to R, I should have the knowledge to alter makevars/makeconf/makevars.win to set the flags that are used when creating the script from R. And at this point we should be able to breakpoints in visual studio code, execute it from the command line and just step through the function as we would normally do.
+
