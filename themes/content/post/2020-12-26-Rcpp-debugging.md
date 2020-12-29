@@ -61,6 +61,7 @@ Really promising references:
 
 * https://code.visualstudio.com/docs/cpp/config-mingw
 * http://www.mingw.org/wiki/sampledll
+* http://www.mingw.org/wiki/includepathhowto
 
 So my current strategy is to find a way to:
 
@@ -98,6 +99,23 @@ That should be the process. One we are at the debugger we should be able to use 
 This is still early in the process. And my C++ experience is till 6 years old (with a break that is of equal length), so I am a bit out of my depths still. 
 
 For this I'll start by creating a commandline script (that is independent of R and Rcpp). Afterwards I'll find the specific flags used by R and try to manually generate a script (old-style) without using R CMD shlib (R CMD shared-library). This **is** possible, and once I've figured it out I will try to access the function from R. This is basically what I expect to be the "old-fashioned" way of generating compiled libraries for R. I might have to rewrite the script slightly here, to accomodate the R `SEXP` class and use **Rcpp.h** for inputs. But I'll figure this out as I go. Last, once I've figured the flags, been able to connect to R, I should have the knowledge to alter makevars/makeconf/makevars.win to set the flags that are used when creating the script from R. And at this point we should be able to breakpoints in visual studio code, execute it from the command line and just step through the function as we would normally do.
+
+### Update 2020-12-29
+Okay now I've had a bit of time to try my skills at this method. And I succeeded. At least partially.... The general methodology is:
+1. Install visual studio code
+1. download and install gdb
+   1. Add the gdb-{ver}/gdb folder to your path
+1. Have R and Rtools installed
+   1. add R/bin to your path
+   1. add Rtools/mingw64/bin to your path
+1. install the C/C++ pluging to visual studio code
+1. Follow the visual studio debugging guide [here](https://code.visualstudio.com/docs/cpp/config-mingw) to ensure the debugger works. Use the path to Rtools/mingw64/bin/gcc.exe as your compiler
+1. Once it works and you have debugged a base C++ script clone and alter [this repository](https://github.com/renkun-ken/vscode-rcpp-demo) for use under windows (a bit harder, more info will follow later). And then try executing the launch with a breakpoint within a an Rcpp script. 
+   1. This is where it fails. It executes succesful without breaking, or exits upon hitting a SIGFAULT (error).
+   1. I have tried altering the makevars by setting -g (not -ggdb because it didn't work). Still need to try removing -DNDEBUG, which might be the reason it doesn't work. 
+
+A few notes: From this point on, it starts to become more clear what is meant in section 4.4 of [Writing R extensions](https://cran.r-project.org/) and I can succesfully get gdb to catch a sigfault in their simple `for(i in seq(1e6))rnorm(100)` example. Still gotta figure out the rest, but it is getting more clear (slowly). Might put this down for a day or two before trying again, and maybe I'll try to see if I can get it working under Linux in a docker image first. That should in theory be simpler.
+
 
 ## Debugging in a Docker environment
 This should in theory be the simplest method of them all. Set up an account for Docker and download Docker Desktop. Log in from the desktop and download the image. Use either the GUI or command prompt to download and start an appropriate docker image. Enter it through the command prompt and execute `R -d gdb -e "script/function"` and go through the debugger as you would expect. 
